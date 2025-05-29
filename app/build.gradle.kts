@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.zxingandroiddemo"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.zxingandroiddemo"
