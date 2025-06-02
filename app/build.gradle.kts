@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.zxingandroiddemo"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.zxingandroiddemo"
@@ -56,4 +56,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    //Zxing embedded
+    implementation (libs.zxing.android.embedded)
 }
