@@ -67,4 +67,6 @@ dependencies {
     implementation (libs.core)
     implementation (libs.accompanist.permissions)
 
+    implementation (libs.androidx.navigation.compose)
+
 }

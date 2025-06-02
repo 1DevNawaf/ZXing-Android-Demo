@@ -1,12 +1,11 @@
 package com.example.zxingandroiddemo.ui.scanner
 
 import android.Manifest
-import androidx.activity.ComponentActivity
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -19,52 +18,67 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.zxingandroiddemo.ui.home.HomeViewModel
 import com.example.zxingandroiddemo.ui.scanner.util.processImageProxy
-import com.google.common.util.concurrent.ListenableFuture
 import java.util.concurrent.Executors
 
 @Composable
-fun QRCodeScannerView(onQRCodeScanned: (String) -> Unit) {
+fun QRCodeScannerView(
+    viewModel: HomeViewModel,
+    onScanned: () -> Unit
+) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var hasPermission by remember { mutableStateOf(false) }
 
-    val launcher = rememberLauncherForActivityResult(
+    val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted -> hasPermission = granted }
     )
 
     LaunchedEffect(Unit) {
-        launcher.launch(Manifest.permission.CAMERA)
+        permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    if (hasPermission) {
-        val cameraProviderFuture: ListenableFuture<ProcessCameraProvider> =
-            remember { ProcessCameraProvider.getInstance(context) }
-        val previewView = remember { PreviewView(context) }
+    if (!hasPermission) {
+        Text("Camera permission is required.")
+        return
+    }
 
-        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-
-        LaunchedEffect(cameraProviderFuture) {
-            val cameraProvider = cameraProviderFuture.get()
-            val preview = androidx.camera.core.Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-
-            val imageAnalyzer = ImageAnalysis.Builder().build().also {
-                it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
-                    processImageProxy(imageProxy, onQRCodeScanned)
+    val previewView = remember { PreviewView(context) }
+    val cameraController = remember {
+        LifecycleCameraController(context).apply {
+            setImageAnalysisAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
+                processImageProxy(imageProxy) { scannedText ->
+                    updateScannedTextAndNavigate(
+                        scannedText,
+                        viewModel,
+                        this,
+                        onScanned
+                    )
                 }
             }
-
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
-                context as ComponentActivity,
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                preview,
-                imageAnalyzer
-            )
         }
-    } else {
-        Text("Camera permission is required to scan QR codes.")
     }
+
+    LaunchedEffect(Unit) {
+        previewView.controller = cameraController
+        cameraController.bindToLifecycle(lifecycleOwner)
+    }
+
+    AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+}
+
+private fun updateScannedTextAndNavigate(
+    scannedText: String,
+    viewModel: HomeViewModel,
+    controller: LifecycleCameraController,
+    onScanned: () -> Unit
+) {
+    controller.unbind()
+    viewModel.updateScannedText(scannedText)
+    Handler(Looper.getMainLooper()).postDelayed({
+        onScanned()
+    }, 200)
 }

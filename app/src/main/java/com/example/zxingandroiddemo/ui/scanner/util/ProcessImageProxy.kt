@@ -12,7 +12,10 @@ import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 
 @OptIn(ExperimentalGetImage::class)
-fun processImageProxy(imageProxy: ImageProxy, onQRCodeScanned: (String) -> Unit) {
+fun processImageProxy(
+    imageProxy: ImageProxy,
+    onQRCodeScanned: (String) -> Unit
+) {
     val mediaImage = imageProxy.image
     if (mediaImage != null) {
         val buffer = mediaImage.planes[0].buffer
