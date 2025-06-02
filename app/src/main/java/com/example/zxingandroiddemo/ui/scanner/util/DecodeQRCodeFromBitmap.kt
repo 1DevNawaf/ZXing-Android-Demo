@@ -14,28 +14,28 @@ fun decodeQRCodeFromBitmap(
     bitmap: Bitmap,
     formats: List<BarcodeFormat>
 ): String? {
-    val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 800, 800, true)
+    val safeBitmap = resizeBitmap(bitmap, 1000)
 
-    val intArray = IntArray(resizedBitmap.width * resizedBitmap.height)
-    resizedBitmap.getPixels(intArray, 0, resizedBitmap.width, 0, 0, resizedBitmap.width, resizedBitmap.height)
+    val width = safeBitmap.width
+    val height = safeBitmap.height
+    val pixels = IntArray(width * height)
+    safeBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
-    val source = RGBLuminanceSource(resizedBitmap.width, resizedBitmap.height, intArray)
+    val source = RGBLuminanceSource(width, height, pixels)
     val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
 
     return try {
         val reader = MultiFormatReader().apply {
             setHints(
                 mapOf(
-                    DecodeHintType.POSSIBLE_FORMATS to formats,
+                    DecodeHintType.POSSIBLE_FORMATS to formats.ifEmpty { BarcodeFormat.entries },
                     DecodeHintType.TRY_HARDER to true
                 )
             )
         }
-
-        val result = reader.decode(binaryBitmap)
-        result.text
+        reader.decode(binaryBitmap).text
     } catch (e: Exception) {
-        Log.d("QRCodeDecode", "Failed: ${e.message}")
+        Log.e("QRCodeDecode", "Failed to decode: ${e.message}")
         null
     }
 }

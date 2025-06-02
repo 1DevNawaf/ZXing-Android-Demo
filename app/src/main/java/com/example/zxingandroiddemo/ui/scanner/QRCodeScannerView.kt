@@ -36,7 +36,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.zxingandroiddemo.ui.home.HomeViewModel
 import com.example.zxingandroiddemo.ui.scanner.util.decodeQRCodeFromBitmap
 import com.example.zxingandroiddemo.ui.scanner.util.processImageProxy
-import com.example.zxingandroiddemo.ui.scanner.util.resizeBitmap
 import com.google.zxing.BarcodeFormat
 import java.io.InputStream
 import java.util.concurrent.Executors
@@ -52,32 +51,35 @@ fun QRCodeScannerView(
     var hasPermission by remember { mutableStateOf(false) }
     val alreadyScanned = remember { mutableStateOf(false) }
 
-
-    // Gallery picker launcher
+    // Image picker for gallery scan
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
             val inputStream: InputStream? = context.contentResolver.openInputStream(it)
-            val original = BitmapFactory.decodeStream(inputStream)
-            val resized = resizeBitmap(original) // 👈 Call resize here
-            val result = decodeQRCodeFromBitmap(resized,supportedFormats)
-            if (result != null) {
-                viewModel.updateScannedText(result)
-                onScanned()
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+
+            if (bitmap != null) {
+                val result = decodeQRCodeFromBitmap(bitmap, supportedFormats)
+                if (result != null) {
+                    viewModel.updateScannedText(result)
+                    onScanned()
+                } else {
+                    Toast.makeText(context, "No QR code found in image", Toast.LENGTH_SHORT).show()
+                }
             } else {
-                Toast.makeText(context, "No QR code found in image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Failed to load image", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    // Permission launcher
+    // Request camera permission
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted -> hasPermission = granted }
     )
 
-    // Request permission on first load
     LaunchedEffect(Unit) {
         permissionLauncher.launch(Manifest.permission.CAMERA)
     }
@@ -91,9 +93,10 @@ fun QRCodeScannerView(
                     imageProxy.close()
                     return@setImageAnalysisAnalyzer
                 }
+
                 processImageProxy(imageProxy, supportedFormats) { scannedText ->
                     alreadyScanned.value = true
-                    this.unbind() // Stop camera
+                    this.unbind()
                     viewModel.updateScannedText(scannedText)
                     Handler(Looper.getMainLooper()).postDelayed({
                         onScanned()
@@ -103,7 +106,7 @@ fun QRCodeScannerView(
         }
     }
 
-    // Bind camera when permission is granted
+    // Bind camera to lifecycle when permission granted
     LaunchedEffect(hasPermission) {
         if (hasPermission) {
             previewView.controller = cameraController
@@ -120,7 +123,6 @@ fun QRCodeScannerView(
                     .weight(1f)
             )
         } else {
-            // Show fallback UI when permission is denied
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -139,7 +141,7 @@ fun QRCodeScannerView(
             }
         }
 
-        // Always show gallery scan option
+        // Always show gallery scan button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
