@@ -7,8 +7,10 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -20,14 +22,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.zxingandroiddemo.ui.theme.ZXingAndroidDemoTheme
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.MultiFormatReader
@@ -35,7 +37,7 @@ import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import java.util.concurrent.Executors
 
-@kotlin.OptIn(ExperimentalPermissionsApi::class)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,17 +52,22 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@ExperimentalPermissionsApi
+
 @Composable
 fun QRCodeScanner(onQRCodeScanned: (String) -> Unit) {
     val context = LocalContext.current
-    val cameraPermissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
+    var hasPermission by remember { mutableStateOf(false) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted -> hasPermission = granted }
+    )
 
     LaunchedEffect(Unit) {
-        cameraPermissionState.launchPermissionRequest()
+        launcher.launch(Manifest.permission.CAMERA)
     }
 
-    if (cameraPermissionState.status.isGranted) {
+    if (hasPermission) {
         val cameraProviderFuture: ListenableFuture<ProcessCameraProvider> =
             remember { ProcessCameraProvider.getInstance(context) }
         val previewView = remember { PreviewView(context) }
@@ -74,9 +81,9 @@ fun QRCodeScanner(onQRCodeScanned: (String) -> Unit) {
             }
 
             val imageAnalyzer = ImageAnalysis.Builder().build().also {
-                it.setAnalyzer(Executors.newSingleThreadExecutor(), { imageProxy ->
+                it.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
                     processImageProxy(imageProxy, onQRCodeScanned)
-                })
+                }
             }
 
             cameraProvider.unbindAll()
@@ -88,7 +95,7 @@ fun QRCodeScanner(onQRCodeScanned: (String) -> Unit) {
             )
         }
     } else {
-        Text("Camera permission required")
+        Text("Camera permission is required to scan QR codes.")
     }
 }
 
