@@ -44,10 +44,7 @@ fun AppNavigator() {
         }
 
         composable("scanner") {
-            val supportedFormats = listOf(
-                BarcodeFormat.QR_CODE,
-                BarcodeFormat.CODE_128
-            )
+            val supportedFormats = BarcodeFormat.entries
             QRCodeScannerView(
                 viewModel = viewModel,
                 onScanned = {
