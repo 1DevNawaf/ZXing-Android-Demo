@@ -13,6 +13,7 @@ import com.example.zxingandroiddemo.ui.home.HomeView
 import com.example.zxingandroiddemo.ui.home.HomeViewModel
 import com.example.zxingandroiddemo.ui.scanner.QRCodeScannerView
 import com.example.zxingandroiddemo.ui.theme.ZXingAndroidDemoTheme
+import com.google.zxing.BarcodeFormat
 
 
 class MainActivity : ComponentActivity() {
@@ -43,11 +44,16 @@ fun AppNavigator() {
         }
 
         composable("scanner") {
+            val supportedFormats = listOf(
+                BarcodeFormat.QR_CODE,
+                BarcodeFormat.CODE_128
+            )
             QRCodeScannerView(
                 viewModel = viewModel,
                 onScanned = {
                     navController.popBackStack()
-                }
+                },
+                supportedFormats
             )
         }
     }
