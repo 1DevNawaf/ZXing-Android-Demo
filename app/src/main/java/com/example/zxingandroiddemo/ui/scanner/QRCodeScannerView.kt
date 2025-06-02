@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.zxingandroiddemo.ui.home.HomeViewModel
 import com.example.zxingandroiddemo.ui.scanner.util.decodeQRCodeFromBitmap
 import com.example.zxingandroiddemo.ui.scanner.util.processImageProxy
+import com.google.zxing.BarcodeFormat
 import java.io.InputStream
 import java.util.concurrent.Executors
 
@@ -48,6 +49,8 @@ fun QRCodeScannerView(
     val lifecycleOwner = LocalLifecycleOwner.current
     var hasPermission by remember { mutableStateOf(false) }
     val alreadyScanned = remember { mutableStateOf(false) }
+    val supportedFormats = listOf(BarcodeFormat.QR_CODE, BarcodeFormat.CODE_128)
+
 
     // Gallery picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -56,7 +59,7 @@ fun QRCodeScannerView(
         uri?.let {
             val inputStream: InputStream? = context.contentResolver.openInputStream(it)
             val bitmap = BitmapFactory.decodeStream(inputStream)
-            val result = decodeQRCodeFromBitmap(bitmap)
+            val result = decodeQRCodeFromBitmap(bitmap,supportedFormats)
             if (result != null) {
                 viewModel.updateScannedText(result)
                 onScanned()
@@ -86,7 +89,7 @@ fun QRCodeScannerView(
                     imageProxy.close()
                     return@setImageAnalysisAnalyzer
                 }
-                processImageProxy(imageProxy) { scannedText ->
+                processImageProxy(imageProxy, supportedFormats) { scannedText ->
                     alreadyScanned.value = true
                     this.unbind() // Stop camera
                     viewModel.updateScannedText(scannedText)
