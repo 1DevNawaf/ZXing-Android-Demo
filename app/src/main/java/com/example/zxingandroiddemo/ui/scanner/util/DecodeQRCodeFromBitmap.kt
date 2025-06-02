@@ -1,36 +1,28 @@
 package com.example.zxingandroiddemo.ui.scanner.util
 
 import android.graphics.Bitmap
-import com.google.zxing.BarcodeFormat
+import android.util.Log
 import com.google.zxing.BinaryBitmap
-import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 
 fun decodeQRCodeFromBitmap(bitmap: Bitmap): String? {
-    val width = bitmap.width
-    val height = bitmap.height
-    val pixels = IntArray(width * height)
-    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+    val resizedBitmap = resizeBitmap(bitmap)
 
-    val source = RGBLuminanceSource(width, height, pixels)
+    val intArray = IntArray(resizedBitmap.width * resizedBitmap.height)
+    resizedBitmap.getPixels(
+        intArray, 0, resizedBitmap.width, 0, 0,
+        resizedBitmap.width, resizedBitmap.height
+    )
+
+    val source = RGBLuminanceSource(resizedBitmap.width, resizedBitmap.height, intArray)
     val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
 
-    val reader = MultiFormatReader().apply {
-        setHints(
-            mapOf(
-                DecodeHintType.TRY_HARDER to true,
-                DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE),
-                DecodeHintType.PURE_BARCODE to false
-            )
-        )
-    }
-
     return try {
-        val result = reader.decode(binaryBitmap)
-        result.text
+        MultiFormatReader().decode(binaryBitmap).text
     } catch (e: Exception) {
+        Log.d("QRCodeScannerView", "Decoding failed: ${e.message}")
         null
     }
 }
