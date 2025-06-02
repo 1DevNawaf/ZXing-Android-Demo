@@ -58,5 +58,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     //Zxing embedded
-    implementation ("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation (libs.zxing.android.embedded)
 }
