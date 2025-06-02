@@ -70,10 +70,18 @@ fun QRCodeScannerView(
     }
 
     val previewView = remember { PreviewView(context) }
+    val alreadyScanned = remember { mutableStateOf(false) }
+
     val cameraController = remember {
         LifecycleCameraController(context).apply {
             setImageAnalysisAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
+                if (alreadyScanned.value) {
+                    imageProxy.close()
+                    return@setImageAnalysisAnalyzer
+                }
+
                 processImageProxy(imageProxy) { scannedText ->
+                    alreadyScanned.value = true
                     updateScannedTextAndNavigate(
                         scannedText,
                         viewModel,
